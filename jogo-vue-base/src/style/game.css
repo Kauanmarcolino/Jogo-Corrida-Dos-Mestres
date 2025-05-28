@@ -1,0 +1,23 @@
+.cenario {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: url('/cenario.png') no-repeat center center;
+  background-size: cover;
+  overflow: hidden;
+}
+
+.boss {
+  position: absolute;
+  right: 0%;
+  bottom: 5%;
+  width: 330px; /* aumentei de 100px para 140px */
+}
+
+.player {
+  position: absolute;
+  left: 0%;
+  bottom: 5%;
+  width: 230px; /* aumentei de 100px para 130px */
+}
+
