@@ -1,138 +1,134 @@
 <template>
   <div class="tela-menu">
-    <div class="binarios binarios-esquerda">
-      <span
-        v-for="(bit, i) in bitsEsq"
-        :key="'esq-' + i"
-        class="bit"
-        :style="{
-          top: bit.top + 'px',
-          left: bit.left + '%',
-          fontSize: bit.size + 'px',
-          color: bit.color
-        }"
-      >
-        {{ bit.value }}
-      </span>
-    </div>
+    <!-- Mensagem no topo -->
+    <div class="msg-f11">{{ textoTopo }}</div>
 
+    <!-- Texto para iniciar -->
+    <div class="msg-enter">Digite ENTER para iniciar</div>
+
+    <!-- Imagem central -->
     <div class="menu-center">
       <img src="/menu.png" alt="Menu" class="img-menu" />
-      <button class="botao" @click="emit('start')">Iniciar Jogo</button>
-    </div>
-
-    <div class="binarios binarios-direita">
-      <span
-        v-for="(bit, i) in bitsDir"
-        :key="'dir-' + i"
-        class="bit"
-        :style="{
-          top: bit.top + 'px',
-          left: bit.left + '%',
-          fontSize: bit.size + 'px',
-          color: bit.color
-        }"
-      >
-        {{ bit.value }}
-      </span>
     </div>
 
     <!-- Botão de som -->
     <button @click="toggleSom" class="btn-som">
-      <img :src="somAtivo ? '/iconSomLigado.png' : '/iconSomDesligado.png'" alt="Som" />
+      <img
+        :src="somAtivo ? '/iconSomLigado.png' : '/iconSomDesligado.png'"
+        alt="Som"
+      />
     </button>
 
-    <!-- Música -->
+    <!-- Música de fundo -->
     <audio ref="musica" src="/musica.mp3" autoplay loop />
+
+    <!-- Som de entrada -->
+    <audio ref="somEnter" src="/som-enter.mp3" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-const emit = defineEmits(['start'])
+import { ref, onMounted, onBeforeUnmount } from "vue";
+const emit = defineEmits(["start"]);
 
-const bitsEsq = ref([])
-const bitsDir = ref([])
-const cores = ['#ffffff']
+const somAtivo = ref(false);
+const musica = ref(null);
+const somEnter = ref(null);
+const textoTopo = ref("F11 para uma melhor experiência =)");
 
-// Som
-const somAtivo = ref(false)
-const musica = ref(null)
-
-function gerarBits() {
-  const criar = () => ({
-    value: Math.round(Math.random()),
-    top: Math.random() * window.innerHeight,
-    left: Math.random() * 100,
-    speed: Math.random() * 2 + 1,
-    color: cores[Math.floor(Math.random() * cores.length)],
-    size: Math.random() * 10 + 10
-  })
-
-  bitsEsq.value = Array.from({ length: 50 }, criar)
-  bitsDir.value = Array.from({ length: 50 }, criar)
-
-  setInterval(() => {
-    bitsEsq.value.forEach(b => {
-      b.top += b.speed
-      if (b.top > window.innerHeight) {
-        b.top = -20
-        b.left = Math.random() * 100
-        b.value = Math.round(Math.random())
-      }
-    })
-    bitsDir.value.forEach(b => {
-      b.top += b.speed
-      if (b.top > window.innerHeight) {
-        b.top = -20
-        b.left = Math.random() * 100
-        b.value = Math.round(Math.random())
-      }
-    })
-  }, 50)
-}
+let intervaloMensagem = null;
 
 function toggleSom() {
-  if (!musica.value) return
-  somAtivo.value = !somAtivo.value
-  somAtivo.value ? musica.value.play().catch(() => {}) : musica.value.pause()
+  if (!musica.value) return;
+  somAtivo.value = !somAtivo.value;
+  somAtivo.value ? musica.value.play().catch(() => {}) : musica.value.pause();
 }
 
-// Ativar som após clique
 function ativarSomAoClique() {
   if (musica.value && somAtivo.value) {
-    musica.value.play().catch(() => {})
+    musica.value.play().catch(() => {});
   }
-  window.removeEventListener('click', ativarSomAoClique)
+  window.removeEventListener("click", ativarSomAoClique);
+}
+
+function handleTecla(e) {
+  if (e.key === "Enter") {
+    if (somEnter.value) {
+      // Reduz o volume da música de fundo
+      if (musica.value) {
+        musica.value.volume = 0.1;
+      }
+
+      somEnter.value.currentTime = 0;
+      somEnter.value.play().catch(() => {});
+
+      // Espera o som terminar, depois +1s pra começar o jogo
+      somEnter.value.onended = () => {
+        setTimeout(() => {
+          emit("start");
+        }, 600); // 1 segundo após fim do som
+      };
+    } else {
+      // fallback caso som não carregue
+      emit("start");
+    }
+  }
+}
+
+// Alterna a mensagem quando estiver em fullscreen
+function iniciarAlternanciaMensagem() {
+  if (intervaloMensagem) return;
+
+  intervaloMensagem = setInterval(() => {
+    textoTopo.value =
+      textoTopo.value === "F11 para uma melhor experiência =)"
+        ? "Agora sim, tudo pronto!"
+        : "F11 para uma melhor experiência =)";
+  }, 3000);
+}
+
+function estaEmFullscreen() {
+  return window.innerHeight === screen.height;
+}
+
+function verificarFullscreenPeriodicamente() {
+  setInterval(() => {
+    if (estaEmFullscreen()) {
+      iniciarAlternanciaMensagem();
+    }
+  }, 1000);
 }
 
 onMounted(() => {
-  gerarBits()
-  if (musica.value) {
-    musica.value.volume = 0.4
-  }
-  window.addEventListener('click', ativarSomAoClique)
-})
+  if (musica.value) musica.value.volume = 0.4;
+  if (somEnter.value) somEnter.value.volume = 1.0;
+
+  window.addEventListener("click", ativarSomAoClique);
+  window.addEventListener("keydown", handleTecla);
+  verificarFullscreenPeriodicamente();
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleTecla);
+  clearInterval(intervaloMensagem);
+});
 </script>
 
 <style scoped>
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
 .tela-menu {
   display: flex;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-}
-
-.binarios {
-  flex: 1;
-  position: relative;
   background: #000;
-  overflow: hidden;
-  pointer-events: none;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
 .menu-center {
-  flex: 0 0 auto;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -145,41 +141,11 @@ onMounted(() => {
   object-fit: contain;
 }
 
-.botao {
-  margin-top: -10%;
-  padding: 15px 30px;
-  background: rgb(143, 9, 9);
-  border: none;
-  font-size: 20px;
-  color: #ffffff;
-  cursor: pointer;
-  border-radius: 0px;
-  font-weight: bold;
-  transition: background 0.3s, transform 0.1s;
-  box-shadow: 4px 4px 0px #000000;
-}
-
-.botao:hover {
-  background: rgb(104, 1, 1);
-}
-
-.botao:active {
-  background: #090;
-  transform: scale(0.95);
-}
-
-.bit {
-  position: absolute;
-  white-space: nowrap;
-  font-family: monospace;
-  font-weight: bold;
-  text-shadow: 0 0 4px #0f0;
-}
-
+/* Botão de som no canto direito */
 .btn-som {
   position: absolute;
-  top: 4px;
-  right: 680px;
+  top: 10px;
+  right: 20px;
   background: none;
   border: none;
   cursor: pointer;
@@ -187,8 +153,54 @@ onMounted(() => {
 }
 
 .btn-som img {
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
+  padding: 3em;
+}
+
+/* Mensagem RGB do topo */
+.msg-f11 {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-family: "Press Start 2P", monospace;
+  font-weight: bold;
+  z-index: 10;
+  pointer-events: none;
+  animation: corRGB 5s infinite linear;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Mensagem ENTER com fade fluido */
+.msg-enter {
+  position: absolute;
+  bottom: 60px;
+  left: 48%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-family: "Press Start 2P", monospace;
+  z-index: 10;
+  animation: fadeBlink 1.5s infinite ease-in-out;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* RGB alternando */
+@keyframes corRGB {
+  0%   { color: #ff5555; }
+  25%  { color: #55aaff; }
+  50%  { color: #55ff55; }
+  75%  { color: #ffff55; }
+  100% { color: #ff5555; }
+}
+
+/* Fade suave piscando */
+@keyframes fadeBlink {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.2; }
+  100% { opacity: 1; }
 }
 </style>
 

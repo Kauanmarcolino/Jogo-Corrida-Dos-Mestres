@@ -26,22 +26,19 @@
         :style="{ right: poderX + 'px' }"
       />
 
-      <!-- Som do nível 1 -->
+      <!-- Áudios -->
       <audio ref="somNivel1" src="/nivel1.mp3" loop />
       <audio ref="somImpacto" src="/somImpacto.mp3" />
       <audio ref="somGameOver" src="/gameover.mp3" />
 
-      <!-- Botão de som -->
+      <!-- Botões -->
       <button @click="toggleSom" class="btn-som">
-        <img
-          :src="somAtivo ? '/iconSomLigado.png' : '/iconSomDesligado.png'"
-          alt="Som"
-        />
+        <img :src="somAtivo ? '/iconSomLigado.png' : '/iconSomDesligado.png'" alt="Som" />
       </button>
 
       <button @click="togglePause" class="btn-pause">
-  <img :src="jogoPausado ? '/iconPauseOn.png' : '/iconPauseOff.png'" alt="Pause" />
-</button>
+        <img src="/botaoPause.png" alt="Pause" />
+      </button>
 
       <!-- Tela de Game Over -->
       <div v-if="gameOver" class="game-over-overlay">
@@ -51,7 +48,6 @@
     </div>
   </div>
 </template>
-
 
 
 <script setup>
@@ -73,6 +69,7 @@ const somNivel1 = ref(null);
 const somImpacto = ref(null);
 const somGameOver = ref(null);
 const somAtivo = ref(false);
+const jogoPausado = ref(false);
 const gameOver = ref(false);
 
 const speed = 5;
@@ -102,6 +99,10 @@ function onKeyUp(e) {
 }
 
 function gameLoop() {
+  if (jogoPausado.value) {
+    frameLoop = requestAnimationFrame(gameLoop);
+    return;
+  }
   if (moving.left) playerX.value = Math.max(0, playerX.value - speed);
   if (moving.right)
     playerX.value = Math.min(window.innerWidth - 100, playerX.value + speed);
@@ -116,6 +117,36 @@ function gameLoop() {
   }
   frameLoop = requestAnimationFrame(gameLoop);
 }
+
+function togglePause() {
+  jogoPausado.value = !jogoPausado.value;
+
+  if (jogoPausado.value) {
+    if (somNivel1.value) somNivel1.value.pause();
+
+    // Para animações
+    if (playerAnim) clearInterval(playerAnim);
+    if (bossAnim) clearInterval(bossAnim);
+  } else {
+    if (somNivel1.value && somAtivo.value) {
+      somNivel1.value.play().catch(() => {});
+    }
+
+    // Retoma animações
+    playerAnim = setInterval(() => {
+      playerSrc.value = playerSrc.value.endsWith("2.png")
+        ? "/player.png"
+        : "/player2.png";
+    }, 300);
+
+    bossAnim = setInterval(() => {
+      bossSrc.value = bossSrc.value.endsWith("2.png")
+        ? "/boss.png"
+        : "/boss2.png";
+    }, 300);
+  }
+}
+
 
 function verificarGameOver() {
   if (vidas.every((v) => !v)) {
@@ -134,7 +165,6 @@ function reiniciarJogo() {
   playerX.value = 50;
   jumpY.value = 0;
   gameOver.value = false;
-
   telaAtual.value = 'menu';
   setTimeout(() => {
     telaAtual.value = 'jogo';
@@ -165,45 +195,55 @@ function iniciarJogo() {
   }, 300);
 
   poderLoop = setInterval(() => {
-    poderVisivel.value = true;
-    poderX.value = 0;
-    let podePerder = true;
-    const anim = setInterval(() => {
-      poderX.value += 10;
-      const pEl = document.querySelector(".poder");
-      const pl = document.querySelector(".player");
-      if (pEl && pl && podePerder) {
-        const r1 = pEl.getBoundingClientRect();
-        const r2 = pl.getBoundingClientRect();
+  if (jogoPausado.value) return;
 
-        if (
-          r1.left < r2.right &&
-          r1.right > r2.left &&
-          r1.top < r2.bottom &&
-          r1.bottom > r2.top
-        ) {
-          const idx = vidas.findIndex((v) => v);
-          if (idx !== -1) vidas[idx] = false;
-          podePerder = false;
+  poderVisivel.value = true;
+  poderX.value = 0;
+  let podePerder = true;
 
-          if (somImpacto.value && somAtivo.value) {
-            somImpacto.value.volume = 1.0;
-            somImpacto.value.currentTime = 0;
-            somImpacto.value.play().catch(() => {});
-          }
+  const anim = setInterval(() => {
+    if (jogoPausado.value) return; // impede que ele mova enquanto pausado
 
-          poderVisivel.value = false;
-          clearInterval(anim);
-          verificarGameOver();
+    poderX.value += 10;
+
+    const pEl = document.querySelector(".poder");
+    const pl = document.querySelector(".player");
+
+    if (pEl && pl && podePerder) {
+      const r1 = pEl.getBoundingClientRect();
+      const r2 = pl.getBoundingClientRect();
+
+      if (
+        r1.left < r2.right &&
+        r1.right > r2.left &&
+        r1.top < r2.bottom &&
+        r1.bottom > r2.top
+      ) {
+        const idx = vidas.findIndex((v) => v);
+        if (idx !== -1) vidas[idx] = false;
+        podePerder = false;
+
+        if (somImpacto.value && somAtivo.value) {
+          somImpacto.value.volume = 1.0;
+          somImpacto.value.currentTime = 0;
+          somImpacto.value.play().catch(() => {});
         }
-      }
-      if (poderX.value > window.innerWidth) {
-        clearInterval(anim);
+
         poderVisivel.value = false;
+        clearInterval(anim);
+        verificarGameOver();
       }
-    }, 50);
-    poderAnims.push(anim);
-  }, 3000);
+    }
+
+    if (poderX.value > window.innerWidth) {
+      clearInterval(anim);
+      poderVisivel.value = false;
+    }
+  }, 50);
+
+  poderAnims.push(anim);
+}, 3000);
+
 }
 
 function limparJogo() {
@@ -227,9 +267,7 @@ function toggleSom() {
 }
 
 watch(telaAtual, (t) => (t === "jogo" ? iniciarJogo() : limparJogo()));
-
 onBeforeUnmount(() => limparJogo());
-
 onMounted(() => {
   const tentarTocarSom = () => {
     if (telaAtual.value === "jogo" && somNivel1.value && somAtivo.value) {
@@ -305,11 +343,12 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   z-index: 20;
+  padding: 3em;
 }
 
 .btn-som img {
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
 }
 
 .game-over-overlay {
@@ -332,7 +371,7 @@ onMounted(() => {
 
 .btn-reiniciar {
   position: absolute;
-  bottom: 380px;
+  bottom: 460px;
   font-family: 'Press Start 2P', monospace;
   font-size: 16px;
   background: red;
@@ -353,7 +392,7 @@ onMounted(() => {
 .btn-pause {
   position: absolute;
   top: 10px;
-  right: 90px; /* ao lado do botão de som */
+  right: 100px;
   background: none;
   border: none;
   cursor: pointer;
@@ -363,5 +402,22 @@ onMounted(() => {
 .btn-pause img {
   width: 52px;
   height: 52px;
+}
+
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.texto-pause {
+  font-family: 'Press Start 2P', monospace;
+  color: white;
+  font-size: 20px;
 }
 </style>
