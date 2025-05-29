@@ -3,9 +3,20 @@
     <Menu v-if="telaAtual === 'menu'" @start="telaAtual = 'jogo'" />
     <div v-else class="cenario">
       <Hud :vidas="vidas" />
-      <Boss :bossSrc="bossSrc" />
-      <Player :playerX="playerX" :jumpY="jumpY" :src="playerSrc" />
 
+      <!-- Sombra do Boss -->
+      <img src="/sombra.png" class="sombra sombra-boss" />
+
+      <!-- Boss -->
+      <Boss :bossSrc="bossSrc" />
+
+      <!-- Player com sombra agrupados -->
+      <div class="player-wrapper" :style="{ left: playerX + 'px' }">
+        <img src="/sombra.png" class="sombra sombra-player" />
+        <Player :jumpY="jumpY" :src="playerSrc" />
+      </div>
+
+      <!-- Poder -->
       <img
         v-if="poderVisivel"
         ref="poder"
@@ -17,11 +28,7 @@
 
       <!-- Som do nível 1 -->
       <audio ref="somNivel1" src="/nivel1.mp3" loop />
-
-      <!-- Som de impacto -->
       <audio ref="somImpacto" src="/somImpacto.mp3" />
-
-      <!-- Som de game over -->
       <audio ref="somGameOver" src="/gameover.mp3" />
 
       <!-- Botão de som -->
@@ -32,16 +39,20 @@
         />
       </button>
 
+      <button @click="togglePause" class="btn-pause">
+  <img :src="jogoPausado ? '/iconPauseOn.png' : '/iconPauseOff.png'" alt="Pause" />
+</button>
+
       <!-- Tela de Game Over -->
       <div v-if="gameOver" class="game-over-overlay">
-        <div class="game-over-box">
-          <h1 class="game-over-text">GAME OVER</h1>
-          <button @click="reiniciarJogo">REINICIAR</button>
-        </div>
+        <img src="/imgGameOver.png" class="img-game-over" alt="Game Over" />
+        <button class="btn-reiniciar" @click="reiniciarJogo">REINICIAR</button>
       </div>
     </div>
   </div>
 </template>
+
+
 
 <script setup>
 import { ref, reactive, watch, onBeforeUnmount, onMounted } from "vue";
@@ -124,11 +135,10 @@ function reiniciarJogo() {
   jumpY.value = 0;
   gameOver.value = false;
 
-  // força a troca de tela para reiniciar a lógica do jogo
   telaAtual.value = 'menu';
   setTimeout(() => {
     telaAtual.value = 'jogo';
-  }, 50); // espera 50ms e volta pro jogo
+  }, 50);
 }
 
 function iniciarJogo() {
@@ -239,11 +249,44 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   background: url("/cenario.png") no-repeat center center;
-  background-size: contain; /* 🔄 troca ESSA linha */
-  background-color: black;  /* cor de fundo se sobrar espaço */
-  background-repeat: no-repeat;
-  image-rendering: pixelated; /* deixa visual retrô */
+  background-size: cover;
+  image-rendering: pixelated;
   overflow: hidden;
+}
+
+.player-wrapper {
+  position: absolute;
+  bottom: 0;
+  z-index: 2;
+}
+
+.sombra {
+  width: 150px;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+  opacity: 0.4;
+  filter: brightness(0.2);
+  z-index: 1;
+}
+
+.sombra-player {
+  position: relative;
+  bottom: -45px;
+  left: 84px;
+}
+
+.sombra-boss {
+  position: absolute;
+  bottom: -85px;     /* ou ajuste fino conforme necessário */
+  right: 70px;     /* ou ajuste fino conforme necessário */
+  width: 320px;     /* <<< aqui você aumenta o tamanho da sombra */
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+  opacity: 0.2;
+  filter: brightness(0.2);
+  z-index: 1;
 }
 
 .poder {
@@ -269,57 +312,56 @@ onMounted(() => {
   height: 52px;
 }
 
-/* Game Over - estilo retrô pixelado */
 .game-over-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 999;
-  display: flex;
-  align-items: center;   /* vertical */
-  justify-content: center; /* horizontal */
-}
-
-.game-over-box {
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-
-  height: 300px;
-  width: 320px;
-
-  background: #000;
-  padding: 40px;
-  border: 2px solid white;
-  box-shadow: 0 0 20px #000;
-  text-align: center;
+  align-items: center;
+  z-index: 9999;
 }
 
-
-.game-over-text {
-  color: rgb(255, 255, 255);
-  font-family: "Press Start 2P", monospace;
-  font-size: 26px;
-  text-shadow: 2px 2px rgb(0, 0, 0);
-  margin-bottom: 30px;
+.img-game-over {
+  width: 100%;
+  max-width: 700px;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 
-.game-over-box button {
-  font-family: "Press Start 2P", monospace;
-  font-size: 14px;
-  background-color: rgb(255, 25, 0);
-  color: black;
-  border: 2px solid rgb(0, 0, 0);
-  padding: 12px 26px;
-  border-radius: 5px;
+.btn-reiniciar {
+  position: absolute;
+  bottom: 380px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  background: red;
+  color: #fff;
+  padding: 16px 32px;
+  border: 4px solid black;
+  box-shadow: 4px 4px black;
   cursor: pointer;
-  box-shadow: 2px 2px rgb(0, 0, 0);
   transition: transform 0.1s;
+  z-index: 1000;
 }
 
-.game-over-box button:hover {
+.btn-reiniciar:hover {
   transform: scale(1.05);
-  background-color: rgba(255, 25, 0, 0.522);
+  background: rgb(100, 0, 0);
+}
+
+.btn-pause {
+  position: absolute;
+  top: 10px;
+  right: 90px; /* ao lado do botão de som */
+  background: none;
+  border: none;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.btn-pause img {
+  width: 52px;
+  height: 52px;
 }
 </style>
