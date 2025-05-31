@@ -42,8 +42,10 @@
 
       <!-- Tela de Game Over -->
       <div v-if="gameOver" class="game-over-overlay">
-        <img src="/imgGameOver.png" class="img-game-over" alt="Game Over" />
-        <button class="btn-reiniciar" @click="reiniciarJogo">REINICIAR</button>
+        <div class="game-over-container">
+          <img src="/imgGameOver.png" class="img-game-over" alt="Game Over" />
+          <button class="btn-reiniciar" @click="reiniciarJogo">REINICIAR</button>
+        </div>
       </div>
     </div>
   </div>
@@ -362,6 +364,14 @@ onMounted(() => {
   z-index: 9999;
 }
 
+.game-over-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
 .img-game-over {
   width: 100%;
   max-width: 700px;
@@ -371,7 +381,7 @@ onMounted(() => {
 
 .btn-reiniciar {
   position: absolute;
-  bottom: 460px;
+  bottom: 38.8%;
   font-family: 'Press Start 2P', monospace;
   font-size: 16px;
   background: red;
