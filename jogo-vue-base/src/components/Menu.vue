@@ -4,7 +4,7 @@
     <div class="msg-f11">{{ textoTopo }}</div>
 
     <!-- Texto para iniciar -->
-    <div class="msg-enter">Digite ENTER para iniciar</div>
+    <div class="msg-enter">Pressione ENTER para iniciar</div>
 
     <!-- Imagem central -->
     <div class="menu-center">
