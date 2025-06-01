@@ -1,7 +1,20 @@
 <template>
   <div>
-    <Menu v-if="telaAtual === 'menu'" @start="telaAtual = 'jogo'" />
-    <div v-else class="cenario">
+    <!-- Tela de Menu -->
+    <Menu v-if="telaAtual === 'menu'" @start="exibirIntro" />
+
+    <!-- HQ de Introdução -->
+    <div v-else-if="telaAtual === 'intro'" class="intro-hq">
+      <img src="/hq-intro.png" class="hq-img" alt="HQ Intro" />
+      <button class="btn-skip" @click="pularIntro">PULAR</button>
+    </div>
+
+    <!-- Tela de Jogo -->
+    <div
+      v-else-if="telaAtual === 'jogo'"
+      class="cenario"
+      @click="onCenarioClick"
+    >
       <Hud :vidas="vidas" />
 
       <!-- Sombra do Boss -->
@@ -32,35 +45,44 @@
         class="moeda-girando"
       />
 
-   <img
-  v-if="mostrarMoedaDourada"
-  :src="`/moedaDourada${moedaDouradaFrame}.png`"
-  class="moeda-girando-dourada"
-/>
+      <img
+        v-if="mostrarMoedaDourada"
+        :src="`/moedaDourada${moedaDouradaFrame}.png`"
+        class="moeda-girando-dourada"
+      />
 
       <!-- Perguntas -->
-      <div v-if="mostrarPergunta" class="pergunta-overlay">
+      <div
+        v-if="mostrarPergunta"
+        class="pergunta-overlay"
+        @click.stop
+      >
         <img src="/imgPerguntaBronze.png" class="img-pergunta" />
         <div class="contador">{{ tempoRestante }}</div>
       </div>
 
-      <div v-if="mostrarPerguntaPrata" class="pergunta-overlay">
+      <div
+        v-if="mostrarPerguntaPrata"
+        class="pergunta-overlay"
+        @click.stop
+      >
         <img src="/perguntaPrata.png" class="img-pergunta" />
         <div class="contador">{{ tempoRestante }}</div>
       </div>
 
-      <div v-if="mostrarPerguntaDourada" class="pergunta-overlay">
+      <div
+        v-if="mostrarPerguntaDourada"
+        class="pergunta-overlay"
+        @click.stop
+      >
         <img src="/perguntaDourada.png" class="img-pergunta" />
-        <div class="contador">{{ tempoRestante }}</div>
+        <div class="contador">{{ tempoRestAnte }}</div>
       </div>
 
       <!-- Player -->
       <div
         class="player-wrapper"
-        :style="{
-          left: playerX + 'px',
-          bottom: estaAgachado ? '-45px' : jumpY + 'px',
-        }"
+        :style="{ left: playerX + 'px', bottom: estaAgachado ? '-45px' : jumpY + 'px' }"
       >
         <Player :jumpY="jumpY" :src="playerSrc" />
       </div>
@@ -86,7 +108,7 @@
       <audio ref="somPerda" src="/somPerda.mp3" />
       <audio ref="somRelogio" src="/somRelogio.mp3" />
 
-      <!-- Botões -->
+      <!-- Botão de Som -->
       <button @click="toggleSom" class="btn-som">
         <img
           :src="somAtivo ? '/iconSomLigado.png' : '/iconSomDesligado.png'"
@@ -94,15 +116,21 @@
         />
       </button>
 
-      <button @click="togglePause" class="btn-pause">
-        <img src="/botaoPause.png" alt="Pause" />
-      </button>
+      <!-- Overlay de Pause -->
+      <div v-if="jogoPausado && !perguntaPausandoJogo" class="pause-overlay">
+        <img src="/telaPause.png" class="img-pause" alt="Pausado" />
+        <button class="btn-continuar" @click.stop="togglePause">
+          CONTINUAR
+        </button>
+      </div>
 
       <!-- Tela de Game Over -->
       <div v-if="gameOver" class="game-over-overlay">
         <div class="game-over-container">
           <img src="/imgGameOver.png" class="img-game-over" alt="Game Over" />
-          <button class="btn-reiniciar" @click="reiniciarJogo">REINICIAR</button>
+          <button class="btn-reiniciar" @click="reiniciarJogo">
+            REINICIAR
+          </button>
         </div>
       </div>
     </div>
@@ -116,7 +144,11 @@ import Hud from "./Hud.vue";
 import Player from "./Player.vue";
 import Boss from "./Boss.vue";
 
-const telaAtual = ref("menu");
+// ──────────────────────────────────────────────────────────────
+// Estados principais
+// ──────────────────────────────────────────────────────────────
+const telaAtual = ref("menu"); // "menu" | "intro" | "jogo"
+let introTimeoutId = null;
 const vidas = reactive([true, true, true]);
 const playerX = ref(50);
 const jumpY = ref(0);
@@ -124,346 +156,112 @@ const playerSrc = ref("/player.png");
 const bossSrc = ref("/boss.png");
 const poderX = ref(0);
 const poderVisivel = ref(false);
+
 const somNivel1 = ref(null);
 const somImpacto = ref(null);
 const somGameOver = ref(null);
-const somAtivo = ref(false);
-const jogoPausado = ref(false);
-const gameOver = ref(false);
 const somAgachando = ref(null);
 const somPulo = ref(null);
+const somMoeda = ref(null);
+const somAcerto = ref(null);
+const somPerda = ref(null);
+const somRelogio = ref(null);
+const somAtivo = ref(false);
+
+const jogoPausado = ref(false);
+const gameOver = ref(false);
+
 const moedaFrame = ref(1);
 const mostrarMoeda = ref(false);
-let moedaAnimacao = null;
-const somMoeda = ref(null);
-const mostrarPergunta = ref(false);
-const respostaDigitada = ref("");
-const tempoRestante = ref(10);
-let timerPergunta = null;
-const somAcerto = ref(null);
-const perguntaPausandoJogo = ref(false);
-const somRelogio = ref(null);
-const somPerda = ref(null);
 const moedaPrataFrame = ref(1);
 const mostrarMoedaPrata = ref(false);
-const mostrarPerguntaPrata = ref(false);
-const mostrarMoedaDourada = ref(false);
 const moedaDouradaFrame = ref(1);
+const mostrarMoedaDourada = ref(false);
+
+const mostrarPergunta = ref(false);
+const mostrarPerguntaPrata = ref(false);
 const mostrarPerguntaDourada = ref(false);
-let animacaoPrata = null;
-let animacaoDourada = null; // Adicionado para controlar animação da dourada
+const respostaDigitada = ref("");
+const tempoRestAnte = ref(10);
+const perguntaPausandoJogo = ref(false);
+
+const estaAgachado = ref(false);
+const direcao = ref("direita");
 
 const speed = 5;
 const jumpForce = 27;
 const gravity = 0.8;
 const grounded = ref(true);
+
 let velocityY = 0;
 let frameLoop = null;
 let bossAnim = null;
 let poderLoop = null;
+let moedaAnimacao = null;
+let animacaoPrata = null;
+let animacaoDourada = null;
+let timerPergunta = null;
 const poderAnims = [];
 const moving = { left: false, right: false, down: false };
-const direcao = ref("direita");
-const estaAgachado = ref(false);
 
-function onKeyDown(e) {
-  if (e.key === "a") {
-    moving.left = true;
-    direcao.value = "esquerda";
-  }
-
-  if (e.key === "d") {
-    moving.right = true;
-    direcao.value = "direita";
-  }
-
-  if (e.key === "s") {
-    moving.down = true;
-
-    if (somAgachando.value && somAtivo.value) {
-      somAgachando.value.currentTime = 0;
-      somAgachando.value.play().catch(() => {});
-    }
-  }
-
-  if ((e.key === " " || e.code === "Space") && grounded.value) {
-    velocityY = jumpForce;
-    grounded.value = false;
-
-    if (somPulo.value && somAtivo.value) {
-      somPulo.value.currentTime = 0;
-      somPulo.value.play().catch(() => {});
-    }
-  }
-
-  if (e.key === "Enter" && telaAtual.value === "menu") {
-    telaAtual.value = "jogo";
-  }
-
-  // Resposta da pergunta BRONZE
-  if (mostrarPergunta.value && /^[0-9]$/.test(e.key)) {
-    respostaDigitada.value += e.key;
-
-    if (respostaDigitada.value === "7") {
-      encerrarPergunta(true); // Acertou
-    } else if (respostaDigitada.value.length >= 2) {
-      encerrarPergunta(false); // Errou
-    }
-  }
-
-  // Resposta da pergunta PRATA
-  if (mostrarPerguntaPrata.value && /^[0-9]$/.test(e.key)) {
-    respostaDigitada.value += e.key;
-
-    if (respostaDigitada.value === "8") {
-      encerrarPerguntaPrata(true); // Acertou
-    } else if (respostaDigitada.value.length >= 2) {
-      encerrarPerguntaPrata(false); // Errou
-    }
-  }
-
-  //Resposta da pergunta DOURADA
-  if (mostrarPerguntaDourada.value && /^[a-zA-Z]$/.test(e.key)) {
-    respostaDigitada.value += e.key.toLowerCase();
-
-    if (respostaDigitada.value.toLowerCase() === "x") {
-      encerrarPerguntaDourada(true); // Acertou
-    } else if (respostaDigitada.value.length >= 2) {
-      encerrarPerguntaDourada(false); // Errou
-    }
-  }
+// ──────────────────────────────────────────────────────────────
+// Exibe a HQ antes de iniciar o jogo
+// ──────────────────────────────────────────────────────────────
+function exibirIntro() {
+  telaAtual.value = "intro";
+  clearTimeout(introTimeoutId);
+  introTimeoutId = setTimeout(() => {
+    if (telaAtual.value === "intro") iniciarJogo();
+  }, 8000);
 }
 
-function onKeyUp(e) {
-  if (e.key === "a") moving.left = false;
-  if (e.key === "d") moving.right = false;
-  if (e.key === "s") moving.down = false;
+// Pula a HQ e inicia imediatamente
+function pularIntro() {
+  clearTimeout(introTimeoutId);
+  iniciarJogo();
 }
 
-function gameLoop() {
-  if (jogoPausado.value || perguntaPausandoJogo.value) return;
+// ──────────────────────────────────────────────────────────────
+// Inicia o jogo (animações, loop, sons, etc)
+// ──────────────────────────────────────────────────────────────
+function iniciarJogo() {
+  telaAtual.value = "jogo";
 
-
-  if (moving.left) playerX.value = Math.max(0, playerX.value - speed);
-  if (moving.right)
-    playerX.value = Math.min(window.innerWidth - 100, playerX.value + speed);
-
-  if (!grounded.value) {
-    velocityY -= gravity;
-    jumpY.value += velocityY;
-
-    if (jumpY.value <= 0) {
-      jumpY.value = 0;
-      grounded.value = true;
-      velocityY = 0;
-    }
+  if (somNivel1.value) {
+    somNivel1.value.currentTime = 0;
+    somNivel1.value.loop = true;
+    somNivel1.value.play().catch(() => {});
   }
+  somAtivo.value = true;
+  gameOver.value = false;
 
-  if (!moving.down) estaAgachado.value = false;
-
-  if (jumpY.value > 0) {
-    playerSrc.value =
-      direcao.value === "esquerda" ? "/jumpVoltando.jpg" : "/playerGiro.png";
-    estaAgachado.value = false;
-  } else if (moving.down && grounded.value) {
-    estaAgachado.value = true;
-    playerSrc.value =
-      moving.left || direcao.value === "esquerda"
-        ? "/agachado2.png"
-        : "/agachado.png";
-  } else if (moving.left) {
-    estaAgachado.value = false;
-    playerSrc.value = "/bonecoVoltando.jpg";
-  } else if (moving.right) {
-    estaAgachado.value = false;
-    playerSrc.value = "/player.png";
-  } else {
-    estaAgachado.value = false;
-    playerSrc.value =
-      direcao.value === "esquerda" ? "/bonecoVoltando.jpg" : "/player.png";
-  }
-
-  const checarColisaoMoeda = (selector, callback) => {
-    const moedaEl = document.querySelector(selector);
-    const playerEl = document.querySelector(".player");
-    if (moedaEl && playerEl) {
-      const r1 = moedaEl.getBoundingClientRect();
-      const r2 = playerEl.getBoundingClientRect();
-      const colidiu =
-        r1.left < r2.right &&
-        r1.right > r2.left &&
-        r1.top < r2.bottom &&
-        r1.bottom > r2.top;
-      if (colidiu) {
-        callback();
-      }
-    }
-  };
-
-  if (mostrarMoeda.value) {
-    checarColisaoMoeda(".moeda-girando", () => {
-      mostrarMoeda.value = false;
-      if (somMoeda.value && somAtivo.value) {
-        somMoeda.value.currentTime = 0;
-        somMoeda.value.play().catch(() => {});
-      }
-      iniciarPergunta();
-      return;
-    });
-  }
-
-  if (mostrarMoedaPrata.value) {
-    checarColisaoMoeda(".moeda-girando", () => {
-      mostrarMoedaPrata.value = false;
-      if (somMoeda.value && somAtivo.value) {
-        somMoeda.value.currentTime = 0;
-        somMoeda.value.play().catch(() => {});
-      }
-      iniciarPerguntaPrata();
-      return;
-    });
-  }
-
-  if (mostrarMoedaDourada.value) {
-    checarColisaoMoeda(".moeda-girando-dourada", () => {
-      mostrarMoedaDourada.value = false;
-      if (somMoeda.value && somAtivo.value) {
-        somMoeda.value.currentTime = 0;
-        somMoeda.value.play().catch(() => {});
-      }
-      iniciarPerguntaDourada();
-      return;
-    });
-  }
-  frameLoop = requestAnimationFrame(gameLoop);
-}
-
-function iniciarPerguntaPrata() {
-  mostrarPerguntaPrata.value = true;
-  respostaDigitada.value = "";
-  tempoRestante.value = 10;
-  perguntaPausandoJogo.value = true;
-  jogoPausado.value = true;
-
-  if (somRelogio.value && somAtivo.value) {
-    somRelogio.value.currentTime = 0;
-    somRelogio.value.play().catch(() => {});
-  }
-
-  timerPergunta = setInterval(() => {
-    tempoRestante.value--;
-    if (tempoRestante.value <= 0) {
-      encerrarPerguntaPrata(false);
-    }
-  }, 1000);
-}
-
-function encerrarPerguntaPrata(acertou) {
-  if (!mostrarPerguntaPrata.value) return;
-  clearInterval(timerPergunta);
-  mostrarPerguntaPrata.value = false;
-  perguntaPausandoJogo.value = false;
-
-  if (somRelogio.value) somRelogio.value.pause();
-
-  if (somAtivo.value) {
-    if (acertou && somAcerto.value) {
-      somAcerto.value.currentTime = 0;
-      somAcerto.value.play().catch(() => {});
-    } else if (!acertou && somPerda.value) {
-      somPerda.value.currentTime = 0;
-      somPerda.value.play().catch(() => {});
-      const idx = vidas.findIndex((v) => v);
-      if (idx !== -1) vidas[idx] = false;
-      verificarGameOver();
-    }
-  }
-
-  if (!grounded.value) {
-    jumpY.value = 0;
-    grounded.value = true;
-    velocityY = 0;
-  }
-
-  // ✅ Libera o jogo
-  jogoPausado.value = false;
-  frameLoop = requestAnimationFrame(gameLoop);
-
-  // ⏱️ Mostra a moeda dourada depois de 4s
-  setTimeout(() => {
-    mostrarMoedaDourada.value = true;
-    moedaDouradaFrame.value = 1;
-    if (animacaoDourada) clearInterval(animacaoDourada);
-    animacaoDourada = setInterval(() => {
-      moedaDouradaFrame.value = moedaDouradaFrame.value === 4 ? 1 : moedaDouradaFrame.value + 1;
-    }, 150);
-  }, 4000);
-}
-
-
-function togglePause() {
-  jogoPausado.value = !jogoPausado.value;
-
-  if (jogoPausado.value) {
-    if (somNivel1.value) somNivel1.value.pause();
-    if (bossAnim) clearInterval(bossAnim);
-  } else {
-    if (somNivel1.value && somAtivo.value)
-      somNivel1.value.play().catch(() => {});
-    bossAnim = setInterval(() => {
-      bossSrc.value = bossSrc.value.endsWith("2.png")
-        ? "/boss.png"
-        : "/boss2.png";
-    }, 300);
-  }
-}
-
-function verificarGameOver() {
-  if (vidas.every((v) => !v)) {
-    gameOver.value = true;
-    limparJogo();
-    if (somNivel1.value) somNivel1.value.pause();
-    if (somGameOver.value && somAtivo.value) {
-      somGameOver.value.currentTime = 0;
-      somGameOver.value.play().catch(() => {});
-    }
-  }
-}
-
-function reiniciarJogo() {
+  // Reset de estado
   vidas.splice(0, vidas.length, true, true, true);
-  mostrarMoeda.value = false;
-mostrarMoedaPrata.value = false;
-mostrarMoedaDourada.value = false;
-mostrarPergunta.value = false;
-mostrarPerguntaPrata.value = false;
-mostrarPerguntaDourada.value = false;
-respostaDigitada.value = "";
-tempoRestante.value = 10;
   playerX.value = 50;
   jumpY.value = 0;
-  gameOver.value = false;
-  telaAtual.value = "menu";
-  setTimeout(() => {
-    telaAtual.value = "jogo";
-  }, 50);
-}
+  poderX.value = 0;
+  poderVisivel.value = false;
+  moedaFrame.value = 1;
+  moedaPrataFrame.value = 1;
+  moedaDouradaFrame.value = 1;
+  mostrarMoeda.value = false;
+  mostrarMoedaPrata.value = false;
+  mostrarMoedaDourada.value = false;
+  mostrarPergunta.value = false;
+  mostrarPerguntaPrata.value = false;
+  mostrarPerguntaDourada.value = false;
+  respostaDigitada.value = "";
+  tempoRestAnte.value = 10;
+  estaAgachado.value = false;
+  grounded.value = true;
+  velocityY = 0;
 
-function iniciarJogo() {
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
   frameLoop = requestAnimationFrame(gameLoop);
 
-  if (somNivel1.value && somAtivo.value) {
-    somNivel1.value.currentTime = 0;
-    somNivel1.value.volume = 1.0;
-    somNivel1.value.play().catch(() => {});
-  }
-
   bossAnim = setInterval(() => {
-    bossSrc.value = bossSrc.value.endsWith("2.png")
-      ? "/boss.png"
-      : "/boss2.png";
+    bossSrc.value = bossSrc.value.endsWith("2.png") ? "/boss.png" : "/boss2.png";
   }, 300);
 
   poderLoop = setInterval(() => {
@@ -474,9 +272,7 @@ function iniciarJogo() {
 
     function animLoop() {
       if (jogoPausado.value) return;
-
       poderX.value += 10;
-
       const pEl = document.querySelector(".poder");
       const pl = document.querySelector(".player");
 
@@ -488,7 +284,6 @@ function iniciarJogo() {
           left: r1Full.left + 20,
           right: r1Full.right - 20,
         };
-
         const r2Full = pl.getBoundingClientRect();
         const r2 = {
           top: r2Full.top + 20,
@@ -506,13 +301,11 @@ function iniciarJogo() {
           const idx = vidas.findIndex((v) => v);
           if (idx !== -1) vidas[idx] = false;
           podePerder = false;
-
           if (somImpacto.value && somAtivo.value) {
             somImpacto.value.volume = 1.0;
             somImpacto.value.currentTime = 0;
             somImpacto.value.play().catch(() => {});
           }
-
           poderVisivel.value = false;
           verificarGameOver();
           return;
@@ -530,63 +323,226 @@ function iniciarJogo() {
     requestAnimationFrame(animLoop);
   }, 5000);
 
-  //TEMPO MOEDA BRONZE
+  // Mostra moeda bronze após 7s
   setTimeout(() => {
     mostrarMoeda.value = true;
     moedaAnimacao = setInterval(() => {
       moedaFrame.value = moedaFrame.value === 4 ? 1 : moedaFrame.value + 1;
-    }, 150); // troca o frame a cada 150ms
-  }, 7000); // começa após 7 segundos
+    }, 150);
+  }, 7000);
 }
 
-function limparJogo() {
-  window.removeEventListener("keydown", onKeyDown);
-  window.removeEventListener("keyup", onKeyUp);
-  if (frameLoop) cancelAnimationFrame(frameLoop);
-  if (bossAnim) clearInterval(bossAnim);
-  if (poderLoop) clearInterval(poderLoop);
-  poderAnims.forEach((id) => clearInterval(id));
-  poderAnims.length = 0;
-  if (somNivel1.value) somNivel1.value.pause();
-}
+// ──────────────────────────────────────────────────────────────
+// Tratamento de teclas
+// ──────────────────────────────────────────────────────────────
+function onKeyDown(e) {
+  if (jogoPausado.value || gameOver.value) return;
 
-function toggleSom() {
-  if (!somNivel1.value) return;
-  somAtivo.value = !somAtivo.value;
-  somAtivo.value
-    ? somNivel1.value.play().catch(() => {})
-    : somNivel1.value.pause();
-}
-
-watch(telaAtual, (t) => (t === "jogo" ? iniciarJogo() : limparJogo()));
-onBeforeUnmount(() => limparJogo());
-onMounted(() => {
-  const tentarTocarSom = () => {
-    if (telaAtual.value === "jogo" && somNivel1.value && somAtivo.value) {
-      somNivel1.value.play().catch(() => {});
+  if (e.key === "a") {
+    moving.left = true;
+    direcao.value = "esquerda";
+  }
+  if (e.key === "d") {
+    moving.right = true;
+    direcao.value = "direita";
+  }
+  if (e.key === "s") {
+    moving.down = true;
+    if (somAgachando.value && somAtivo.value) {
+      somAgachando.value.currentTime = 0;
+      somAgachando.value.play().catch(() => {});
     }
-    window.removeEventListener("click", tentarTocarSom);
-  };
-  window.addEventListener("click", tentarTocarSom);
-});
+  }
+  if ((e.key === " " || e.code === "Space") && grounded.value) {
+    velocityY = jumpForce;
+    grounded.value = false;
+    if (somPulo.value && somAtivo.value) {
+      somPulo.value.currentTime = 0;
+      somPulo.value.play().catch(() => {});
+    }
+  }
+  if (e.key === "Enter" && telaAtual.value === "menu") {
+    exibirIntro();
+  }
 
+  // Respostas das perguntas
+  if (mostrarPergunta.value && /^[0-9]$/.test(e.key)) {
+    respostaDigitada.value += e.key;
+    if (respostaDigitada.value === "7") encerrarPergunta(true);
+    else if (respostaDigitada.value.length >= 2) encerrarPergunta(false);
+  }
+  if (mostrarPerguntaPrata.value && /^[0-9]$/.test(e.key)) {
+    respostaDigitada.value += e.key;
+    if (respostaDigitada.value === "8") encerrarPerguntaPrata(true);
+    else if (respostaDigitada.value.length >= 2)
+      encerrarPerguntaPrata(false);
+  }
+  if (mostrarPerguntaDourada.value && /^[a-zA-Z]$/.test(e.key)) {
+    respostaDigitada.value += e.key.toLowerCase();
+    if (respostaDigitada.value.toLowerCase() === "x")
+      encerrarPerguntaDourada(true);
+    else if (respostaDigitada.value.length >= 2)
+      encerrarPerguntaDourada(false);
+  }
+
+  if (e.key === "Escape") togglePause();
+}
+
+function onKeyUp(e) {
+  if (jogoPausado.value || gameOver.value) return;
+  if (e.key === "a") moving.left = false;
+  if (e.key === "d") moving.right = false;
+  if (e.key === "s") {
+    moving.down = false;
+    if (somAgachando.value) {
+      somAgachando.value.pause();
+      somAgachando.value.currentTime = 0;
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Clique no cenário (para pausar / despausar)
+// ──────────────────────────────────────────────────────────────
+function onCenarioClick() {
+  // Se alguma pergunta estiver ativa, não dispara togglePause
+  if (
+    mostrarPergunta.value ||
+    mostrarPerguntaPrata.value ||
+    mostrarPerguntaDourada.value
+  ) {
+    return;
+  }
+  togglePause();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Loop principal do jogo
+// ──────────────────────────────────────────────────────────────
+function gameLoop() {
+  if (jogoPausado.value || perguntaPausandoJogo.value || gameOver.value)
+    return;
+
+  // Movimento horizontal
+  if (moving.left) playerX.value = Math.max(0, playerX.value - speed);
+  if (moving.right)
+    playerX.value = Math.min(window.innerWidth - 100, playerX.value + speed);
+
+  // ─── LÓGICA CORRIGIDA DE PULO, GRAVIDADE E SPRITE ───
+  if (!grounded.value) {
+    // Subtrai gravidade para desacelerar subida e iniciar queda
+    velocityY -= gravity;
+    jumpY.value += velocityY;
+
+    // Enquanto estiver no ar, usa o sprite de pulo
+    playerSrc.value =
+      direcao.value === "esquerda" ? "/jumpVoltando.jpg" : "/playerGiro.png";
+    estaAgachado.value = false;
+
+    // Se bateu no chão (jumpY ≤ 0), reseta tudo
+    if (jumpY.value <= 0) {
+      jumpY.value = 0;
+      velocityY = 0;
+      grounded.value = true;
+    }
+  } else {
+    // Está no chão, garante que jumpY fique em zero
+    jumpY.value = 0;
+
+    // Agora, se estiver se movendo para baixo (agachar), troca o sprite:
+    if (moving.down) {
+      estaAgachado.value = true;
+      playerSrc.value =
+        moving.left || direcao.value === "esquerda"
+          ? "/agachado2.png"
+          : "/agachado.png";
+    }
+    // Se estiver andando para a esquerda
+    else if (moving.left) {
+      estaAgachado.value = false;
+      playerSrc.value = "/bonecoVoltando.jpg";
+    }
+    // Se estiver andando para a direita
+    else if (moving.right) {
+      estaAgachado.value = false;
+      playerSrc.value = "/player.png";
+    }
+    // Caso parado em pé (nem se movendo nem agachado)
+    else {
+      estaAgachado.value = false;
+      playerSrc.value =
+        direcao.value === "esquerda" ? "/bonecoVoltando.jpg" : "/player.png";
+    }
+  }
+  // ────────────────────────────────────────────────────────
+
+  // Colisão moedas
+  const checarColisaoMoeda = (selector, onCollect) => {
+    const moedaEl = document.querySelector(selector);
+    const playerEl = document.querySelector(".player");
+    if (moedaEl && playerEl) {
+      const r1 = moedaEl.getBoundingClientRect();
+      const r2 = playerEl.getBoundingClientRect();
+      const colidiu =
+        r1.left < r2.right &&
+        r1.right > r2.left &&
+        r1.top < r2.bottom &&
+        r1.bottom > r2.top;
+      if (colidiu) onCollect();
+    }
+  };
+
+  if (mostrarMoeda.value) {
+    checarColisaoMoeda(".moeda-girando", () => {
+      mostrarMoeda.value = false;
+      if (somMoeda.value && somAtivo.value) {
+        somMoeda.value.currentTime = 0;
+        somMoeda.value.play().catch(() => {});
+      }
+      iniciarPergunta();
+    });
+  }
+  if (mostrarMoedaPrata.value) {
+    checarColisaoMoeda(".moeda-girando", () => {
+      mostrarMoedaPrata.value = false;
+      if (somMoeda.value && somAtivo.value) {
+        somMoeda.value.currentTime = 0;
+        somMoeda.value.play().catch(() => {});
+      }
+      iniciarPerguntaPrata();
+    });
+  }
+  if (mostrarMoedaDourada.value) {
+    checarColisaoMoeda(".moeda-girando-dourada", () => {
+      mostrarMoedaDourada.value = false;
+      if (somMoeda.value && somAtivo.value) {
+        somMoeda.value.currentTime = 0;
+        somMoeda.value.play().catch(() => {});
+      }
+      iniciarPerguntaDourada();
+    });
+  }
+
+  frameLoop = requestAnimationFrame(gameLoop);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Pergunta Bronze
+// ──────────────────────────────────────────────────────────────
 function iniciarPergunta() {
   mostrarPergunta.value = true;
   respostaDigitada.value = "";
-  tempoRestante.value = 10;
-
+  tempoRestAnte.value = 10;
   perguntaPausandoJogo.value = true;
-  jogoPausado.value = true;
-
-  // Toca som do relógio
+  // NÃO colocamos jogoPausado = true aqui, pois já está pausado por perguntaPausandoJogo
   if (somRelogio.value && somAtivo.value) {
     somRelogio.value.currentTime = 0;
     somRelogio.value.play().catch(() => {});
   }
 
   timerPergunta = setInterval(() => {
-    tempoRestante.value--;
-    if (tempoRestante.value <= 0) {
+    tempoRestAnte.value--;
+    if (tempoRestAnte.value <= 0) {
       encerrarPergunta(false);
     }
   }, 1000);
@@ -597,7 +553,6 @@ function encerrarPergunta(acertou) {
   clearInterval(timerPergunta);
   mostrarPergunta.value = false;
   perguntaPausandoJogo.value = false;
-
   if (somRelogio.value) somRelogio.value.pause();
 
   if (somAtivo.value) {
@@ -619,37 +574,99 @@ function encerrarPergunta(acertou) {
     velocityY = 0;
   }
 
-  // ✅ Libera o jogo imediatamente
-  jogoPausado.value = false;
+  // Libera o jogo imediatamente
+  // Não setamos jogoPausado aqui; já estava false após perguntaPausandoJogo false
   frameLoop = requestAnimationFrame(gameLoop);
 
-  // ⏱️ Mostra a moeda prata após 2s
+  // Mostra moeda prata após 2s
   setTimeout(() => {
     mostrarMoedaPrata.value = true;
     moedaPrataFrame.value = 1;
-    setInterval(() => {
-      moedaPrataFrame.value = moedaPrataFrame.value === 4 ? 1 : moedaPrataFrame.value + 1;
+    animacaoPrata = setInterval(() => {
+      moedaPrataFrame.value =
+        moedaPrataFrame.value === 4 ? 1 : moedaPrataFrame.value + 1;
     }, 150);
   }, 2000);
 }
 
-
-function iniciarPerguntaDourada() {
-  mostrarPerguntaDourada.value = true;
+// ──────────────────────────────────────────────────────────────
+// Pergunta Prata
+// ──────────────────────────────────────────────────────────────
+function iniciarPerguntaPrata() {
+  mostrarPerguntaPrata.value = true;
   respostaDigitada.value = "";
-  tempoRestante.value = 10;
-
+  tempoRestAnte.value = 10;
   perguntaPausandoJogo.value = true;
-  jogoPausado.value = true;
-
+  // NÃO setamos jogoPausado aqui.
   if (somRelogio.value && somAtivo.value) {
     somRelogio.value.currentTime = 0;
     somRelogio.value.play().catch(() => {});
   }
 
   timerPergunta = setInterval(() => {
-    tempoRestante.value--;
-    if (tempoRestante.value <= 0) {
+    tempoRestAnte.value--;
+    if (tempoRestAnte.value <= 0) {
+      encerrarPerguntaPrata(false);
+    }
+  }, 1000);
+}
+
+function encerrarPerguntaPrata(acertou) {
+  if (!mostrarPerguntaPrata.value) return;
+  clearInterval(timerPergunta);
+  mostrarPerguntaPrata.value = false;
+  perguntaPausandoJogo.value = false;
+  if (somRelogio.value) somRelogio.value.pause();
+
+  if (somAtivo.value) {
+    if (acertou && somAcerto.value) {
+      somAcerto.value.currentTime = 0;
+      somAcerto.value.play().catch(() => {});
+    } else if (!acertou && somPerda.value) {
+      somPerda.value.currentTime = 0;
+      somPerda.value.play().catch(() => {});
+      const idx = vidas.findIndex((v) => v);
+      if (idx !== -1) vidas[idx] = false;
+      verificarGameOver();
+    }
+  }
+
+  if (!grounded.value) {
+    jumpY.value = 0;
+    grounded.value = true;
+    velocityY = 0;
+  }
+
+  frameLoop = requestAnimationFrame(gameLoop);
+
+  // Mostra moeda dourada após 4s
+  setTimeout(() => {
+    mostrarMoedaDourada.value = true;
+    moedaDouradaFrame.value = 1;
+    animacaoDourada = setInterval(() => {
+      moedaDouradaFrame.value =
+        moedaDouradaFrame.value === 4 ? 1 : moedaDouradaFrame.value + 1;
+    }, 150);
+  }, 4000);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Pergunta Dourada
+// ──────────────────────────────────────────────────────────────
+function iniciarPerguntaDourada() {
+  mostrarPerguntaDourada.value = true;
+  respostaDigitada.value = "";
+  tempoRestAnte.value = 10;
+  perguntaPausandoJogo.value = true;
+  // NÃO setamos jogoPausado aqui.
+  if (somRelogio.value && somAtivo.value) {
+    somRelogio.value.currentTime = 0;
+    somRelogio.value.play().catch(() => {});
+  }
+
+  timerPergunta = setInterval(() => {
+    tempoRestAnte.value--;
+    if (tempoRestAnte.value <= 0) {
       encerrarPerguntaDourada(false);
     }
   }, 1000);
@@ -660,7 +677,6 @@ function encerrarPerguntaDourada(acertou) {
   clearInterval(timerPergunta);
   mostrarPerguntaDourada.value = false;
   perguntaPausandoJogo.value = false;
-
   if (somRelogio.value) somRelogio.value.pause();
 
   if (somAtivo.value) {
@@ -681,11 +697,103 @@ function encerrarPerguntaDourada(acertou) {
     }
   }
 
-  // ✅ Libera o jogo na hora
-  jogoPausado.value = false;
   frameLoop = requestAnimationFrame(gameLoop);
 }
 
+// ──────────────────────────────────────────────────────────────
+// Verifica Game Over
+// ──────────────────────────────────────────────────────────────
+function verificarGameOver() {
+  if (vidas.every((v) => !v)) {
+    gameOver.value = true;
+    limparJogo();
+    if (somNivel1.value) somNivel1.value.pause();
+    if (somGameOver.value && somAtivo.value) {
+      somGameOver.value.currentTime = 0;
+      somGameOver.value.play().catch(() => {});
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Reiniciar Jogo
+// ──────────────────────────────────────────────────────────────
+function reiniciarJogo() {
+  vidas.splice(0, vidas.length, true, true, true);
+  mostrarMoeda.value = false;
+  mostrarMoedaPrata.value = false;
+  mostrarMoedaDourada.value = false;
+  mostrarPergunta.value = false;
+  mostrarPerguntaPrata.value = false;
+  mostrarPerguntaDourada.value = false;
+  respostaDigitada.value = "";
+  tempoRestAnte.value = 10;
+  playerX.value = 50;
+  jumpY.value = 0;
+  gameOver.value = false;
+  telaAtual.value = "menu";
+  setTimeout(() => {
+    telaAtual.value = "jogo";
+  }, 50);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Limpa tudo ao sair
+// ──────────────────────────────────────────────────────────────
+function limparJogo() {
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
+  if (frameLoop) cancelAnimationFrame(frameLoop);
+  if (bossAnim) clearInterval(bossAnim);
+  if (poderLoop) clearInterval(poderLoop);
+  poderAnims.forEach((id) => clearInterval(id));
+  poderAnims.length = 0;
+  if (somNivel1.value) somNivel1.value.pause();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Liga/desliga som
+// ──────────────────────────────────────────────────────────────
+function toggleSom() {
+  if (!somNivel1.value) return;
+  somAtivo.value = !somAtivo.value;
+  if (somAtivo.value) somNivel1.value.play().catch(() => {});
+  else somNivel1.value.pause();
+}
+
+// ──────────────────────────────────────────────────────────────
+// Liga/desliga pause
+// ──────────────────────────────────────────────────────────────
+function togglePause() {
+  jogoPausado.value = !jogoPausado.value;
+  if (jogoPausado.value) {
+    if (somNivel1.value) somNivel1.value.pause();
+    if (timerPergunta) clearInterval(timerPergunta);
+  } else {
+    if (somAtivo.value && somNivel1.value) somNivel1.value.play().catch(() => {});
+    if (!perguntaPausandoJogo.value) frameLoop = requestAnimationFrame(gameLoop);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// “Watcher” para trocar de tela
+// ──────────────────────────────────────────────────────────────
+watch(telaAtual, (t) => {
+  if (t === "jogo") iniciarJogo();
+  else limparJogo();
+});
+
+onBeforeUnmount(() => limparJogo());
+
+onMounted(() => {
+  const tentarTocarSom = () => {
+    if (telaAtual.value === "jogo" && somNivel1.value && somAtivo.value) {
+      somNivel1.value.play().catch(() => {});
+    }
+    window.removeEventListener("click", tentarTocarSom);
+  };
+  window.addEventListener("click", tentarTocarSom);
+});
 </script>
 
 <style scoped>
@@ -726,9 +834,9 @@ function encerrarPerguntaDourada(acertou) {
 
 .sombra-boss {
   position: absolute;
-  bottom: -134px; /* ou ajuste fino conforme necessário */
-  right: 70px; /* ou ajuste fino conforme necessário */
-  width: 320px; /* <<< aqui você aumenta o tamanho da sombra */
+  bottom: -134px; /* ajuste conforme necessário */
+  right: 70px;    /* ajuste conforme necessário */
+  width: 320px;   /* ajuste conforme necessário */
   height: auto;
   image-rendering: pixelated;
   pointer-events: none;
@@ -823,19 +931,39 @@ function encerrarPerguntaDourada(acertou) {
 }
 
 .pause-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  align-items: center;
   z-index: 9998;
 }
 
-.texto-pause {
+.img-pause {
+  max-width: 700px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.btn-continuar {
+  margin-top: 100px; /* Aumente esse valor se ainda estiver muito acima */
   font-family: "Press Start 2P", monospace;
+  font-size: 16px;
+  background: limegreen;
   color: white;
-  font-size: 20px;
+  padding: 16px 32px;
+  border: 4px solid black;
+  box-shadow: 4px 4px black;
+  cursor: pointer;
+  transition: transform 0.1s;
+  z-index: 1000;
+}
+
+.btn-continuar:hover {
+  transform: scale(1.05);
+  background: green;
 }
 
 .moeda-girando {
@@ -846,6 +974,15 @@ function encerrarPerguntaDourada(acertou) {
   width: 180px;
   height: auto;
   image-rendering: pixelated;
+  z-index: 10;
+}
+
+.moeda-girando-dourada {
+  width: 190px;
+  height: auto;
+  position: absolute;
+  left: 30%;
+  bottom: 600px;
   z-index: 10;
 }
 
@@ -873,12 +1010,38 @@ function encerrarPerguntaDourada(acertou) {
   margin-top: 30px;
 }
 
-.moeda-girando-dourada {
-  width: 190px;
-  height: auto;
-  position: absolute;
-  left: 30%;
-  bottom: 600px;
-  z-index: 10;
+.intro-hq {
+  position: fixed;
+  inset: 0;
+  background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999;
+}
+
+.hq-img {
+  max-width: 100%;
+  max-height: 100vh;
+  image-rendering: pixelated;
+}
+
+.btn-skip {
+  margin-top: 20px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  padding: 12px 24px;
+  background: red;
+  color: white;
+  border: 4px solid black;
+  box-shadow: 4px 4px black;
+  cursor: pointer;
 }
 </style>
+
+
+
+
+
+
