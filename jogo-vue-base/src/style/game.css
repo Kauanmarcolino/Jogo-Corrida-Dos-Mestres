@@ -39,7 +39,7 @@ body, html {
 .boss {
   position: absolute;
   right: 50px;
-  bottom: 5%;
+  bottom: -1px;
   width: 330px;
   height: auto;
   z-index: 2;

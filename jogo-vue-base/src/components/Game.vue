@@ -100,8 +100,10 @@
 
       <!-- Tela de Game Over -->
       <div v-if="gameOver" class="game-over-overlay">
-        <img src="/imgGameOver.png" class="img-game-over" alt="Game Over" />
-        <button class="btn-reiniciar" @click="reiniciarJogo">REINICIAR</button>
+        <div class="game-over-container">
+          <img src="/imgGameOver.png" class="img-game-over" alt="Game Over" />
+          <button class="btn-reiniciar" @click="reiniciarJogo">REINICIAR</button>
+        </div>
       </div>
     </div>
   </div>
@@ -724,7 +726,7 @@ function encerrarPerguntaDourada(acertou) {
 
 .sombra-boss {
   position: absolute;
-  bottom: -85px; /* ou ajuste fino conforme necessário */
+  bottom: -134px; /* ou ajuste fino conforme necessário */
   right: 70px; /* ou ajuste fino conforme necessário */
   width: 320px; /* <<< aqui você aumenta o tamanho da sombra */
   height: auto;
@@ -770,6 +772,14 @@ function encerrarPerguntaDourada(acertou) {
   z-index: 9999;
 }
 
+.game-over-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
 .img-game-over {
   width: 100%;
   max-width: 700px;
@@ -779,9 +789,7 @@ function encerrarPerguntaDourada(acertou) {
 
 .btn-reiniciar {
   position: absolute;
-  bottom: px;
-  top: 53%;
-  left: 45%;
+  bottom: 38.8%;
   font-family: "Press Start 2P", monospace;
   font-size: 16px;
   background: red;
