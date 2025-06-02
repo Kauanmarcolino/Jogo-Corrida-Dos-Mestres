@@ -1,22 +1,20 @@
-// Player.vue
 <template>
-    <img :src="src" class="player" :style="{ left: playerX + 'px', bottom: '5%', transform: `translateY(${-jumpY}px)` }"
-        alt="Jogador" />
+  <img :src="src" :key="src" class="player" alt="Jogador" />
 </template>
 
 <script setup>
 const props = defineProps({
-    playerX: { type: Number, required: true },
-    jumpY: { type: Number, required: true },
-    src: { type: String, required: true }
-})
+  src: { type: String, required: true },
+  jumpY: Number // mesmo se não estiver usando, mantenha
+  });
 </script>
 
 <style scoped>
 .player {
-    position: absolute;
-    width: 230px;
-    transition: left 0.1s, transform 0.1s;
-    z-index: 2;
+  position: absolute;
+  width: 230px;
+  transition: left 0.1s, transform 0.1s;
+  z-index: 2;
 }
 </style>
+

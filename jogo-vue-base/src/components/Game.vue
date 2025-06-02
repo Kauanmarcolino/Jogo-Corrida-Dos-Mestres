@@ -58,7 +58,7 @@
         @click.stop
       >
         <img src="/imgPerguntaBronze.png" class="img-pergunta" />
-        <div class="contador">{{ tempoRestante }}</div>
+        <div class="contador">{{ tempoRestAnte }}</div>
       </div>
 
       <div
@@ -67,7 +67,7 @@
         @click.stop
       >
         <img src="/perguntaPrata.png" class="img-pergunta" />
-        <div class="contador">{{ tempoRestante }}</div>
+        <div class="contador">{{ tempoRestAnte }}</div>
       </div>
 
       <div
@@ -156,7 +156,7 @@ const playerSrc = ref("/player.png");
 const bossSrc = ref("/boss.png");
 const poderX = ref(0);
 const poderVisivel = ref(false);
-
+const invulneravel = ref(false);
 const somNivel1 = ref(null);
 const somImpacto = ref(null);
 const somGameOver = ref(null);
@@ -189,7 +189,7 @@ const estaAgachado = ref(false);
 const direcao = ref("direita");
 
 const speed = 5;
-const jumpForce = 27;
+const jumpForce = 30;
 const gravity = 0.8;
 const grounded = ref(true);
 
@@ -203,6 +203,7 @@ let animacaoDourada = null;
 let timerPergunta = null;
 const poderAnims = [];
 const moving = { left: false, right: false, down: false };
+
 
 // ──────────────────────────────────────────────────────────────
 // Exibe a HQ antes de iniciar o jogo
@@ -276,8 +277,9 @@ function iniciarJogo() {
       const pEl = document.querySelector(".poder");
       const pl = document.querySelector(".player");
 
-      if (pEl && pl && podePerder) {
-        const r1Full = pEl.getBoundingClientRect();
+      if (pEl && pl && podePerder && !invulneravel.value) {
+  const r1Full = pEl.getBoundingClientRect();
+  // ...
         const r1 = {
           top: r1Full.top + 20,
           bottom: r1Full.bottom - 20,
@@ -749,6 +751,14 @@ function limparJogo() {
   poderAnims.forEach((id) => clearInterval(id));
   poderAnims.length = 0;
   if (somNivel1.value) somNivel1.value.pause();
+
+  //faz pausar todos os sons qnd vier a tela de gameover
+  [somImpacto, somAgachando, somRelogio, somPulo, somMoeda, somAcerto, somPerda].forEach((som) => {
+  if (som.value) {
+    som.value.pause();
+    som.value.currentTime = 0;
+  }
+});
 }
 
 // ──────────────────────────────────────────────────────────────
