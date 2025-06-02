@@ -22,11 +22,6 @@
 
       <!-- Boss -->
       <Boss :bossSrc="bossSrc" />
-      <!-- Barra de vida do boss -->
-<div class="boss-life-bar-outer">
-  <div class="boss-life-bar-inner" :style="{ width: vidaBoss + '%' }"></div>
-</div>
-
 
       <!-- Sombra do Player (fora do wrapper para não subir junto) -->
       <img
@@ -197,15 +192,6 @@ const speed = 5;
 const jumpForce = 27;
 const gravity = 0.8;
 const grounded = ref(true);
-
-const vidaBoss = ref(100); // valor de 0 a 100
-
-function verificarResposta() {
-  vidaBoss.value -= 25;
-  if (vidaBoss.value < 0) vidaBoss.value = 0;
-}
-
-
 
 let velocityY = 0;
 let frameLoop = null;
@@ -573,7 +559,6 @@ function encerrarPergunta(acertou) {
     if (acertou && somAcerto.value) {
       somAcerto.value.currentTime = 0;
       somAcerto.value.play().catch(() => {});
-      verificarResposta(); // ← AQUI REDUZ A VIDA DO BOSS
     } else if (!acertou && somPerda.value) {
       somPerda.value.currentTime = 0;
       somPerda.value.play().catch(() => {});
@@ -589,9 +574,20 @@ function encerrarPergunta(acertou) {
     velocityY = 0;
   }
 
+  // Libera o jogo imediatamente
+  // Não setamos jogoPausado aqui; já estava false após perguntaPausandoJogo false
   frameLoop = requestAnimationFrame(gameLoop);
-}
 
+  // Mostra moeda prata após 2s
+  setTimeout(() => {
+    mostrarMoedaPrata.value = true;
+    moedaPrataFrame.value = 1;
+    animacaoPrata = setInterval(() => {
+      moedaPrataFrame.value =
+        moedaPrataFrame.value === 4 ? 1 : moedaPrataFrame.value + 1;
+    }, 150);
+  }, 2000);
+}
 
 // ──────────────────────────────────────────────────────────────
 // Pergunta Prata
@@ -1042,25 +1038,6 @@ onMounted(() => {
   box-shadow: 4px 4px black;
   cursor: pointer;
 }
-
-.boss-life-bar-outer {
-  position: absolute;
-  right: 120px; /* Alinha com o boss */
-  bottom: 340px; /* 80px do boss + altura do boss (~90px) */
-  width: 200px;
-  height: 20px;
-  border: 3px solid #000;
-  background: #440000;
-  image-rendering: pixelated;
-  z-index: 5;
-}
-
-.boss-life-bar-inner {
-  height: 100%;
-  background: red;
-  transition: width 0.2s ease-out;
-}
-
 </style>
 
 
