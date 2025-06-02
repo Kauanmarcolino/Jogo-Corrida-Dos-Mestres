@@ -22,12 +22,6 @@
 
       <!-- Boss -->
       <Boss :bossSrc="bossSrc" />
-      <!-- Barra de vida do boss -->
-<div class="boss-life-bar-outer">
-  <div class="boss-life-bar-inner" :style="{ width: vidaBoss + '%' }"></div>
-</div>
-
-
 
       <!-- Sombra do Player (fora do wrapper para não subir junto) -->
       <img
@@ -64,7 +58,7 @@
         @click.stop
       >
         <img src="/imgPerguntaBronze.png" class="img-pergunta" />
-        <div class="contador">{{ tempoRestante }}</div>
+        <div class="contador">{{ tempoRestAnte }}</div>
       </div>
 
       <div
@@ -73,7 +67,7 @@
         @click.stop
       >
         <img src="/perguntaPrata.png" class="img-pergunta" />
-        <div class="contador">{{ tempoRestante }}</div>
+        <div class="contador">{{ tempoRestAnte }}</div>
       </div>
 
       <div
@@ -162,7 +156,7 @@ const playerSrc = ref("/player.png");
 const bossSrc = ref("/boss.png");
 const poderX = ref(0);
 const poderVisivel = ref(false);
-
+const invulneravel = ref(false);
 const somNivel1 = ref(null);
 const somImpacto = ref(null);
 const somGameOver = ref(null);
@@ -195,18 +189,9 @@ const estaAgachado = ref(false);
 const direcao = ref("direita");
 
 const speed = 5;
-const jumpForce = 35;
+const jumpForce = 37;
 const gravity = 0.8;
 const grounded = ref(true);
-
-const vidaBoss = ref(100); // valor de 0 a 100
-
-function verificarResposta() {
-  vidaBoss.value -= 25;
-  if (vidaBoss.value < 0) vidaBoss.value = 0;
-}
-
-
 
 let velocityY = 0;
 let frameLoop = null;
@@ -218,6 +203,7 @@ let animacaoDourada = null;
 let timerPergunta = null;
 const poderAnims = [];
 const moving = { left: false, right: false, down: false };
+
 
 // ──────────────────────────────────────────────────────────────
 // Exibe a HQ antes de iniciar o jogo
@@ -291,8 +277,9 @@ function iniciarJogo() {
       const pEl = document.querySelector(".poder");
       const pl = document.querySelector(".player");
 
-      if (pEl && pl && podePerder) {
-        const r1Full = pEl.getBoundingClientRect();
+      if (pEl && pl && podePerder && !invulneravel.value) {
+  const r1Full = pEl.getBoundingClientRect();
+  // ...
         const r1 = {
           top: r1Full.top + 20,
           bottom: r1Full.bottom - 20,
@@ -574,7 +561,6 @@ function encerrarPergunta(acertou) {
     if (acertou && somAcerto.value) {
       somAcerto.value.currentTime = 0;
       somAcerto.value.play().catch(() => {});
-      verificarResposta(); // ← AQUI REDUZ A VIDA DO BOSS
     } else if (!acertou && somPerda.value) {
       somPerda.value.currentTime = 0;
       somPerda.value.play().catch(() => {});
@@ -590,9 +576,20 @@ function encerrarPergunta(acertou) {
     velocityY = 0;
   }
 
+  // Libera o jogo imediatamente
+  // Não setamos jogoPausado aqui; já estava false após perguntaPausandoJogo false
   frameLoop = requestAnimationFrame(gameLoop);
-}
 
+  // Mostra moeda prata após 2s
+  setTimeout(() => {
+    mostrarMoedaPrata.value = true;
+    moedaPrataFrame.value = 1;
+    animacaoPrata = setInterval(() => {
+      moedaPrataFrame.value =
+        moedaPrataFrame.value === 4 ? 1 : moedaPrataFrame.value + 1;
+    }, 150);
+  }, 2000);
+}
 
 // ──────────────────────────────────────────────────────────────
 // Pergunta Prata
@@ -737,7 +734,6 @@ function reiniciarJogo() {
   jumpY.value = 0;
   gameOver.value = false;
   telaAtual.value = "menu";
-  vidaBoss
   setTimeout(() => {
     telaAtual.value = "jogo";
   }, 50);
@@ -755,6 +751,14 @@ function limparJogo() {
   poderAnims.forEach((id) => clearInterval(id));
   poderAnims.length = 0;
   if (somNivel1.value) somNivel1.value.pause();
+
+  //faz pausar todos os sons qnd vier a tela de gameover
+  [somImpacto, somAgachando, somRelogio, somPulo, somMoeda, somAcerto, somPerda].forEach((som) => {
+  if (som.value) {
+    som.value.pause();
+    som.value.currentTime = 0;
+  }
+});
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1044,25 +1048,6 @@ onMounted(() => {
   box-shadow: 4px 4px black;
   cursor: pointer;
 }
-
-.boss-life-bar-outer {
-  position: absolute;
-  right: 125px; /* Alinha com o boss */
-  bottom: 340px; /* 80 (bottom do boss) + 90 (altura do boss) + 20 de margem extra */
-  width: 200px;
-  height: 20px;
-  border: 3px solid #000;
-  background: #440000;
-  image-rendering: pixelated;
-  z-index: 5;
-}
-
-.boss-life-bar-inner {
-  height: 100%;
-  background: red;
-  transition: width 0.2s ease-out;
-}
-
 </style>
 
 
