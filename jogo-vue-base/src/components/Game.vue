@@ -189,7 +189,7 @@ const estaAgachado = ref(false);
 const direcao = ref("direita");
 
 const speed = 5;
-const jumpForce = 30;
+const jumpForce = 37;
 const gravity = 0.8;
 const grounded = ref(true);
 
